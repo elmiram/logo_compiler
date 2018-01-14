@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Extract text in RTF Files. Refactored to use with Python 3.x
-Source:
-    http://stackoverflow.com/a/188877
-Code created by Markus Jarderot: http://mizardx.blogspot.com
+Processing for RTF text.
+
+This code uses LibreOffice for converting RTF to HTML.
+If LibreOffice is not found, RTF is converted to plain text.
 """
+
+__author__ = "Elmira Mustakimova <cclikespizza@gmail.com>"
 
 import logging
 import platform
@@ -17,6 +19,12 @@ from subprocess import Popen, PIPE
 
 
 def striprtf(text):
+    """
+    Extract text in RTF Files. Refactored to use with Python 3.x
+    Source:
+        http://stackoverflow.com/a/188877
+    Code created by Markus Jarderot: http://mizardx.blogspot.com
+    """
     pattern = re.compile(r"\\([a-z]{1,32})(-?\d{1,10})?[ ]?|\\'([0-9a-f]{2})|\\([^a-z])|([{}])|[\r\n]+|(.)", re.I)
     # control words which specify a "destionation".
     destinations = frozenset((
@@ -147,6 +155,18 @@ def striprtf(text):
 
 
 def rtf2html(libreoffice_path, text):
+    """
+    Convert RTF to HTML with LibreOffice.
+
+    :param libreoffice_path: str with a full path to LibreOffice executable file - soffice or soffice.exe
+    :param text: text to convert (bytes or str)
+    :return: str with full HTML
+
+    This function requires write access!
+    Because it writes rtf to temporary file which is fed to LibreOffice.
+    LibreOffice also will need write access because it will output result into another temporary file.
+    Both temporary files are removed after conversion is finished.
+    """
     if not isinstance(text, str):
         try:
             text = text.decode()
@@ -176,15 +196,26 @@ def rtf2html(libreoffice_path, text):
 
 
 def libreoffice_exists(path):
+    """
+    Check that path to LibreOffice exists.
+    :param path: str with a full path to LibreOffice executable file - soffice or soffice.exe
+    :return: path or empty string
+    """
+
     # EXTENSION = '.exe' if platform.system() == "Windows" else ''
     # LIBREOFFICE_PATH = '{PATH}/program/soffice{EXTENSION}'.format(PATH=path, EXTENSION=EXTENSION)
     # if os.path.exists(path) and os.path.exists(LIBREOFFICE_PATH):
+
     if os.path.exists(path):
         return path  # LIBREOFFICE_PATH
     return ''
 
 
 def get_function_for_rtf_processing(path):
+    """
+    Return function which will be used for RTF processing - convert either to HTML or plain text.
+    :param path: str with a full path to LibreOffice executable file - soffice or soffice.exe
+    """
     LIBREOFFICE_PATH = libreoffice_exists(path)
     if LIBREOFFICE_PATH:
         def process_rtf(text):

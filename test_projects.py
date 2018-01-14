@@ -4,8 +4,6 @@ Tests for parser.py.
 Only check that projects compile without failing.
 """
 
-# TODO: add description to the module-level docstring
-
 __author__ = "Elmira Mustakimova <cclikespizza@gmail.com>"
 
 import os

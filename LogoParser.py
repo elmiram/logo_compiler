@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Parser and translator for Logo programming language.
 """

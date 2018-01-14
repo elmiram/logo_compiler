@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Parser for MicroWorlds project.
 
@@ -6,7 +8,7 @@ The contents of the project are transferred to data.js file.
 """
 
 __author__ = "Elmira Mustakimova <cclikespizza@gmail.com>"
-__version__ = '1.17'
+__version__ = "1.18.1"
 
 import argparse
 import base64
