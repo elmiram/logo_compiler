@@ -1,0 +1,181 @@
+name,is_command,args_num,trans
+*,0,2,prims.product({}, {})
++,0,2,prims.sum({}, {})
+-,0,2,prims.difference({}, {})
+/,0,2,prims.quotient({}, {})
+<,0,2,prims.less({}, {})
+=,0,2,prims.equal({}, {})
+>,0,2,prims.greater({}, {})
+ABS,0,1,prims.abs({})
+AND,0,2+,prims.and({})
+ANNOUNCEJR,1,1,yield* prims.announce({});
+ANSWER,0,0,prims.answer()
+ARCTAN,0,1,prims.arctan({})
+ASCII,0,1,prims.ascii({})
+ASK,2,2,yield* prims.ask({}, function*(){{ {} }})
+BACK,1,1,yield* prims.bk({});
+BG,0,0,prims.bg()
+BOTTOM,1,0,yield* prims.bottom();
+BROADCAST,1,1,yield* prims.broadcast({});
+BUTFIRST,0,1,prims.butfirst({})
+BUTLAST,0,1,prims.butlast({})
+CAREFULLY,1,2,try{{ {} }} catch (e) {{ prims.handleCarefully(e); {} }} finally {{ prims.finallyCarefully();}}
+CB,1,0,yield* prims.cb();
+CC,1,0,yield* prims.cc();
+CD,1,0,yield* prims.cd();
+CF,1,0,yield* prims.cf();
+CG,1,0,yield* prims.cg();
+CHAR,0,1,prims.char({})
+CLEAN,1,0,yield* prims.clean();
+CLEARNAME,1,1,prims.clearname({});
+CLEARNAMES,1,0,prims.clearnames();
+CLEARTEXT,1,0,yield* prims.cleartext();
+CLICKOFF,1,0,yield* prims.clickoff();
+CLICKON,1,0,yield* prims.clickon();
+COLOR,0,0,prims.color()
+COLORUNDER,0,0,prims.colorunder()
+COPY,1,0,prims.copy();
+COS,0,1,prims.cos({})
+COUNT,0,1,prims.count({})
+CREATEPROJECTVAR,1,1,yield* prims.createprojectvar({});
+CU,1,0,yield* prims.cu();
+CUT,1,0,yield* prims.cut();
+DELETE,1,0,yield* prims.deletechar();
+DIFFERENCE,0,2,prims.difference({}, {})
+DISTANCE,0,1,prims.distance({})
+DOLIST,1,2,yield* prims.dolist(scope, {}, function*(){{ {} }});
+DOTIMES,1,2,yield* prims.dotimes(scope, {}, function*(){{ {} }});
+EMPTY?,0,1,prims.empty({})
+EOL,1,0,yield* prims.eol();
+EOT?,0,0,prims.eot()
+EQUAL?,0,2,prims.equal({}, {})
+ERRORMESSAGE,0,0,prims.errormessage()
+EVERYONE,1,1,yield* prims.everyone(function*(){{ {} }});
+EXP,0,1,prims.exp({})
+FILL,1,0,yield* prims.fill();
+FIRST,0,1,prims.first({})
+FOREVER,1,1,prims.forever(function* (globals,processContext, obj){{ var prims = processContext.prims; var vars = globals.vars; var userproc = globals.userproc; var scope = vars.globalScope; {} }});
+FORWARD,1,1,yield* prims.fd({});
+FPUT,0,2,prims.fput({}, {})
+FREEZE,1,1,yield* prims.freeze({});
+FREEZEBG,1,0,yield* prims.freezebg();
+GETPAGE,1,1,yield* prims.getpage({});
+GIVETURTLE,1,1,yield* prims.giveturtle({});
+GLIDE,1,2,yield* prims.glide({}, {});
+GREATER?,0,2,prims.greater({}, {})
+HEADING,0,0,prims.heading()
+HIDETEXT,1,0,yield* prims.hidetext();
+HOME,1,0,yield* prims.home();
+HT,1,0,yield* prims.ht();
+IDENTICAL?,0,2,prims.identical({}, {})
+IF,1,2,yield* prims.if({}, function*(){{ {} }});
+IFELSE,1,3,yield* prims.ifelse({}, function*(){{ {} }}, function*(){{ {} }});
+INBACK,1,0,yield* prims.inback();
+INFRONT,1,0,yield* prims.infront();
+INSERT,1,1,yield* prims.insert({});
+INT,0,1,prims.int({})
+ITEM,0,2,prims.item({}, {})
+LAST,0,1,prims.last({})
+LAUNCH,1,1,prims.launch(function* (globals,processContext, obj){{ var prims = processContext.prims; var vars = globals.vars; var userproc = globals.userproc; var scope = vars.globalScope; {} }});
+LEFT,1,1,yield* prims.lt({});
+LESS?,0,2,prims.less({}, {})
+LET,1,1,scope.local({}, {});
+LIST,0,2+,prims.list({})
+LIST?,0,1,prims.islist({})
+LN,0,1,prims.ln({})
+LOG,0,1,prims.log({})
+LPUT,0,2,prims.lput({}, {})
+MAKE,1,2,scope.make({}, {});
+MEMBER?,0,2,prims.member({}, {})
+MESSAGE,0,0,prims.message()
+MESSAGEFROM,0,0,prims.sender()
+MOUSEPOS,0,0,prims.mousepos()
+MINUS,0,1,prims.minus({})
+NAME?,0,1,scope.isname({})
+NAMEPAGE,1,1,yield* prims.namepage({});
+NAMES,0,0,scope.names()
+NEXTPAGE,1,0,yield* prims.nextpage();
+NOT,0,1,prims.not({})
+NUMBER?,0,1,prims.isnumber({})
+OPACITY,0,0,prims.opacity()
+OR,0,2+,prims.or({})
+OUTPUT,1,1,return yield({});
+PAGELIST,0,0,prims.pagelist()
+PARSE,0,1,prims.parse({})
+PASTE,1,0,prims.paste();
+PD,1,0,yield* prims.pd();
+PE,1,0,yield* prims.penerase();
+PENSIZE,0,0,prims.pensize()
+PI,0,0,prims.pi()
+PICK,0,1,prims.pick({})
+POS,0,0,prims.pos()
+POWER,0,2,prims.power({}, {})
+PREVPAGE,1,0,yield* prims.prevpage();
+PRINT,1,1,yield* prims.print({});
+PRODUCT,0,2+,prims.product({})
+PU,1,0,yield* prims.pu();
+QUESTION,1,1,yield* prims.question({});
+QUOTIENT,0,2,prims.quotient({}, {})
+RANDOM,0,1,prims.random({})
+REMAINDER,0,2,prims.remainder({}, {})
+RENAME,1,2,yield* prims.rename({}, {});
+REPEAT,1,2,yield* prims.repeat ({}, function*(){{ {} }});
+RESETT,1,0,yield* prims.resett();
+RIGHT,1,1,yield* prims.rt({});
+ROUND,0,1,prims.round({})
+SAY,1,1,yield* prims.say({});
+SAYAS,1,2,yield* prims.sayas({}, {});
+SEARCH,1,1,yield* prims.search({});
+SELECT,1,0,prims.select();
+SELECTED,0,0,prims.selected()
+SENTENCE,0,2+,prims.sentence({})
+SETBG,1,1,yield* prims.setbg({});
+SETC,1,1,yield* prims.setcolor({});
+SETFONTSIZE,1,1,yield* prims.setfontsize({});
+SETH,1,1,yield* prims.setheading({});
+SETOPACITY,1,1,yield* prims.setopacity({});
+SETPENSIZE,1,1,yield* prims.setpensize({});
+SETPOS,1,1,yield* prims.setpos({});
+SETSHAPE,1,1,yield* prims.setshape({});
+SETSIZE,1,1,yield* prims.setsize({});
+SETX,1,1,yield* prims.setx({});
+SETY,1,1,yield* prims.sety({});
+SHAPE,0,0,prims.shape()
+SHOW,1,1,yield* prims.show({});
+SHOWTEXT,1,0,yield* prims.showtext();
+SIN,0,1,prims.sin({})
+SIZE,0,0,prims.size()
+SOL,1,0,yield* prims.sol();
+SPEAKTEXT,1,1,yield* prims.speaktext({});
+SQRT,0,1,prims.sqrt({})
+ST,1,0,yield* prims.st();
+STAMP,1,0,yield* prims.stamp();
+STOP,1,0,yield; return;
+STOPALL,1,0,yield* prims.stopall();
+STOPME,1,0,yield* prims.stopme();
+SUM,0,2+,prims.sum({})
+TALKTO,1,1,yield* prims.tto({});
+TAN,0,1,prims.tan({})
+TELL,1,2,yield* prims.tell({}, {});
+TEXTCOUNT,0,1,prims.textcount({})
+TEXTITEM,0,2,prims.textitem({}, {})
+TEXTPICK,0,1,prims.textpick({})
+TEXTWHO,0,0,prims.textwho()
+THING,1,1,scope.thing({});
+TIMER,0,0,prims.timer()
+TOP,1,0,prims.top();
+TOUCHING?,0,2,prims.touching({}, {})
+TOWARDS,1,1,yield* prims.towards({});
+TRANSPARENT,1,1,yield* prims.transparent({});
+TURTLESOWN,1,1,yield* prims.turtlesown({});
+UNFREEZE,1,1,yield* prims.unfreeze({});
+UNFREEZEBG,1,0,yield* prims.unfreezebg();
+UNSELECT,1,0,yield* prims.unselect();
+VOICES,0,0,prims.voices()
+WAIT,1,1,yield* prims.wait({});
+WHO,0,0,prims.who()
+WORD,0,2+,prims.word({})
+WORD?,0,1,prims.isword({})
+XCOR,0,0,prims.xcor()
+YCOR,0,0,prims.ycor()
+YOURNAME,0,0,prims.touchedturtle()

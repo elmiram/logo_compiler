@@ -1,0 +1,15 @@
+#type	primitive	command 1 /function 0   numargs	translation
+page	{name}	1	0	yield* prims.getpage("{name}");
+t	{name},	1	0	yield* prims.tto("{name}");
+text	{name},	1	0	yield* prims.tto("{name}");
+text	{setname}{name}	1	1	yield* prims.settext("{name}", {{}});
+text	{name}	0	0	prims.gettext("{name}")
+music	{name}	1	0	yield* prims.audiostart("{name}");
+record	{name}	1	0	yield* prims.audiostart("{name}");
+melody	{name}	1	0	yield* prims.audiostart("{name}");
+slider	{name}	0	0	prims.getslider("{name}")
+slider	{setname}{name}	1	1	yield* prims.setslider("{name}", {{}});
+projectvar	{name}	0	0	prims.getprojectvar("{name}")
+projectvar	{setname}{name}	1	1	yield* prims.setprojectvar("{name}", {{}});
+turtlevar	{name}	0	0	prims.getturtlevar("{name}")
+turtlevar	{setname}{name}	1	1	yield* prims.setturtlevar("{name}", {{}});
