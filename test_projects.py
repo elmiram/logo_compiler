@@ -23,7 +23,7 @@ class TestProjects(TestCase):
                     'test_projects/button.mj3', 'test_projects/DropBalls.mwx']
         for project in projects:
             print(project)
-            value = os.system("python parser.py \"" + project + '\" --libreoffice \"C:/Program Files (x86)/LibreOffice 5\" --log critical')
+            value = os.system("python parser.py \"" + project + '\" --libreoffice \"C:/Program Files (x86)/LibreOffice 5/program/soffice.exe" --log critical')
             if value != 0:
                 self.fail('Compiler failed at project {}.'.format(project))
 

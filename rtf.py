@@ -205,7 +205,7 @@ def libreoffice_exists(path):
     # EXTENSION = '.exe' if platform.system() == "Windows" else ''
     # LIBREOFFICE_PATH = '{PATH}/program/soffice{EXTENSION}'.format(PATH=path, EXTENSION=EXTENSION)
     # if os.path.exists(path) and os.path.exists(LIBREOFFICE_PATH):
-
+    # TODO: check is_file, check ends with soffice or soffice.exe
     if os.path.exists(path):
         return path  # LIBREOFFICE_PATH
     return ''

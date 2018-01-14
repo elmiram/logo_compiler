@@ -63,6 +63,7 @@ def read_object_rules(fname):
 
 
 def add_new_prim(new_prim, is_command, argnum, new_trans, type_name):
+    """Add new primitives with object names to the dict of primitives."""
     if new_prim not in PARSER.ENV:
         PARSER.ENV[new_prim] = Primitive(new_prim, is_command, argnum, new_trans)
         PARSER.ENV.locale_reverse_index[new_prim] = PARSER.ENV[new_prim]
@@ -74,7 +75,7 @@ def add_new_prim(new_prim, is_command, argnum, new_trans, type_name):
 
 
 def process_rules(type_name, object_name):
-    """Добавляем в словарь примитивов новые примитивы с именами объектов."""
+    """Update rules of given type with the given name."""
     object_name = object_name.lower()
     rules = TYPES[type_name]
     for rule in rules:
@@ -434,6 +435,7 @@ def process_bitmaps(bitmaps, this_obj):
 
 def get_logo_constant(logo_code):
     code = PARSER.translate_from_anywhere(logo_code, all_constants=True)
+    # TODO give warning if could not load json
     js_code = json.loads(code) if code else ""
     return js_code
 
@@ -664,8 +666,6 @@ def second_run():
     FBASE = open('library.dll', 'rb')  # Библиотека
     f = open(TEMPORARY_FILE, 'rb')
 
-    # print(PARSER.ENV['headline'].trans)
-
     final_object = Object()
     final_object.compiler_version = __version__
     final_object.pages = []
@@ -720,11 +720,17 @@ def second_run():
 
 
 def check_localization_dir_exists(language):
-    if language != "English" and not os.path.exists(os.path.join(BASE_DIR, language)):
-        logger.warning('Localization directory <{}> does not exist. '
-                       'Trying to read from <{}>.'.format(os.path.join(BASE_DIR, language),
-                                                          os.path.join(BASE_DIR, "English")))
-        language = "English"
+    if language != "English":
+        if not os.path.exists(os.path.join(BASE_DIR, language)):
+            logger.warning('Localization directory <{}> does not exist. '
+                           'Trying to read from <{}>.'.format(os.path.join(BASE_DIR, language),
+                                                              os.path.join(BASE_DIR, "English")))
+            language = "English"
+        else:
+            if os.path.exists(os.path.join(BASE_DIR, "English")):
+                logger.error('Localization directory <{}> does not exist. '.format(os.path.join(BASE_DIR, language)))
+                logger.error('Parser cannot proceed.')
+                exit()
     if language == "English" and not os.path.exists(os.path.join(BASE_DIR, language)):
         logger.error('Localization directory <{}> does not exist. '.format(os.path.join(BASE_DIR, language)))
         logger.error('Parser cannot proceed.')
@@ -733,15 +739,14 @@ def check_localization_dir_exists(language):
 
 
 if __name__ == "__main__":
-    # парсим аргументы командной строки
+    # parse command line arguments
     p = argparse.ArgumentParser()
-    p.add_argument('project_file', help="Путь к файлу с mwx-проектом.")
+    p.add_argument('project_file', help="Path to mwx-project.")
     p.add_argument('--libreoffice', type=str, dest="libreoffice", default="/usr/lib/libreoffice/program/soffice",
-                   help="Путь к LibreOffice.")
+                   help="Path to LibreOffice.")
     p.add_argument('--locale', type=str, dest="locale", default="none",
-                   help="Код языка локализации: en или ru. По умолчанию этот аргумент принимает значение \"en\", "
-                        "при запуске на английских проектах --locale можно не прописывать. Но для трансляции проектов "
-                        "с русскими командами нужно будет прописать --locale ru.")
+                   help="Language name, e.g. English or Russian. By default the project's language is extracted "
+                        "from the   project file itself. This argument can be used to override the project's language.")
     p.add_argument('--log', type=str, dest="log", default="INFO",
                    choices=["debug", "info", 'warning', 'error', 'critical'],
                    help="Наименьший уровень сообщений, которые необходимо распечатывать:\n"
