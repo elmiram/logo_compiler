@@ -763,42 +763,43 @@ if __name__ == "__main__":
                               libreoffice="C:/Program Files (x86)/LibreOffice 5/program/soffice.exe",
                               log="debug", locale='Russian')
 
-    # try:
-    # устанавливаем уровень логгирования
-    LOG_LEVEL = logging.getLevelName(cmd_args.log.upper())
-    logging.basicConfig(level=LOG_LEVEL, stream=sys.stdout)
-    logging.getLogger('ProjectParser').setLevel(LOG_LEVEL)
-    logging.getLogger('LogoParser').setLevel(LOG_LEVEL)
+    try:
+        # устанавливаем уровень логгирования
+        LOG_LEVEL = logging.getLevelName(cmd_args.log.upper())
+        logging.basicConfig(level=LOG_LEVEL, stream=sys.stdout)
+        logging.getLogger('ProjectParser').setLevel(LOG_LEVEL)
+        logging.getLogger('LogoParser').setLevel(LOG_LEVEL)
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    TEMPORARY_FILE = os.path.join(BASE_DIR, "js-test.dat")
-    PROJECT_FILE = cmd_args.project_file
-    PROCESS_RTF, PLAINTEXT = get_function_for_rtf_processing(cmd_args.libreoffice)
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        TEMPORARY_FILE = os.path.join(BASE_DIR, "js-test.dat")
+        PROJECT_FILE = cmd_args.project_file
+        PROCESS_RTF, PLAINTEXT = get_function_for_rtf_processing(cmd_args.libreoffice)
 
-    logger.info("Compiler version: {}".format(__version__))
-    logger.info("Start reading project.")
+        logger.info("Compiler version: {}".format(__version__))
+        logger.info("Start reading project.")
 
-    LANGUAGE, VERSION, FILE_LEN = temporary_file_length(PROJECT_FILE, TEMPORARY_FILE)
-    if cmd_args.locale != 'none':
-        LANGUAGE = cmd_args.locale
+        LANGUAGE, VERSION, FILE_LEN = temporary_file_length(PROJECT_FILE, TEMPORARY_FILE)
+        if cmd_args.locale != 'none':
+            LANGUAGE = cmd_args.locale
 
-    LANGUAGE = check_localization_dir_exists(LANGUAGE)
+        LANGUAGE = check_localization_dir_exists(LANGUAGE)
 
-    object_rules_file = os.path.join(BASE_DIR, 'object-rules.csv')
-    TYPES = read_object_rules(object_rules_file)
+        object_rules_file = os.path.join(BASE_DIR, 'object-rules.csv')
+        TYPES = read_object_rules(object_rules_file)
 
-    PARSER = Parser(locale=LANGUAGE)
+        PARSER = Parser(locale=LANGUAGE)
 
-    first_run()
+        first_run()
 
-    obj = second_run()
+        obj = second_run()
 
-    os.remove(TEMPORARY_FILE)
+        os.remove(TEMPORARY_FILE)
 
-    logger.info("Writing data...")
-    with open(os.path.join(BASE_DIR, 'data.js'), 'w', encoding='utf-8') as fo:
-        fo.write("projectData = {};".format(obj.to_JSON()))
-    logger.info("Processing finished.")
-    print('0', file=sys.stderr)
-    # except:
-    #     print('1', file=sys.stderr)
+        logger.info("Writing data...")
+        with open(os.path.join(BASE_DIR, 'data.js'), 'w', encoding='utf-8') as fo:
+            fo.write("projectData = {};".format(obj.to_JSON()))
+        logger.info("Processing finished.")
+        print('0', file=sys.stderr)
+    except Exception as e:
+        logger.critical(e)
+        print('1', file=sys.stderr)
