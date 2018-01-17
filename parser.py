@@ -146,7 +146,7 @@ def add_proc_to_dict(procs):
     for proc in procsarray:
         proc_name, arg_num, args_list = PARSER.primary_analysis(proc)
         if proc_name:
-            PARSER.ENV[proc_name] = Primitive(proc_name, 1, arg_num, "USERPROC", locale=[proc_name, proc_name.lower()])
+            PARSER.ENV[proc_name] = Primitive(proc_name, 0, arg_num, "USERPROC", locale=[proc_name, proc_name.lower()])
             PARSER.ENV.locale_reverse_index[proc_name.lower()] = PARSER.ENV[proc_name]
             logger.info("Rule for user procedure <{}>  is added to dictionary.".format(proc_name))
 
@@ -454,11 +454,13 @@ def process_object(obj_content, this_obj):
         key = c[0]
         if key in {'locked?', 'visible?', 'snaped?', 'singleline?',
                    'type', 'show-name?', 'vertical?', 'name',
-                   'min', 'max', 'current', 'value', 'defvalue'}:
+                   'min', 'max', 'current', 'value', 'defvalue', 'mode'}:
             attr_name = key.replace('?', '').replace('-', '_')
             vars(new_obj)[attr_name] = get_logo_constant(c[1])
             if attr_name == 'name':
+                # TODO: if type record\audio
                 new_obj.filename = new_obj.name + ".wav"
+                # TODO: check that mode is Embeded, if empty - WARNING: Object is not used because not embeded
         elif key == 'label':
             new_obj.label = c[1]
         elif key == "rect":
@@ -727,8 +729,8 @@ def check_localization_dir_exists(language):
                                                               os.path.join(BASE_DIR, "English")))
             language = "English"
         else:
-            if os.path.exists(os.path.join(BASE_DIR, "English")):
-                logger.error('Localization directory <{}> does not exist. '.format(os.path.join(BASE_DIR, language)))
+            if not os.path.exists(os.path.join(BASE_DIR, "English")):
+                logger.error('Localization directory <{}> does not exist. '.format(os.path.join(BASE_DIR, "English")))
                 logger.error('Parser cannot proceed.')
                 exit()
     if language == "English" and not os.path.exists(os.path.join(BASE_DIR, language)):
@@ -764,9 +766,9 @@ if __name__ == "__main__":
         # для целей тестирования можно запускать этот код без командной строки,
         # тогда нужные аргументы нужно прописать ниже:
         cmd_args = Object()
-        vars(cmd_args).update(project_file="test_projects/bug54.mwx",
+        vars(cmd_args).update(project_file="test_projects/Женя_Л.mj3",
                               libreoffice="C:/Program Files (x86)/LibreOffice 5/program/soffice.exe",
-                              log="debug", locale='Russian')
+                              log="critical", locale='Russian')
 
     try:
         # устанавливаем уровень логгирования

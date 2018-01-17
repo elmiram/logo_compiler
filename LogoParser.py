@@ -343,6 +343,8 @@ class Parser(object):
                                       for word in self.ENV.STRINGS["sym_to"]]))
         self.REG_PROC = re.compile("(?:^|\n)(?:\\s*)\\b{}\\b.*?\\b{}\\b".format(START, END), flags=re.DOTALL)
 
+        self.CASHED = {}
+
     def make_procsarray(self, procs):
         """Receives text with procedures and comments, extracts the procedure code and cuts comments."""
         procs = self.cut_comments(procs)
@@ -885,7 +887,7 @@ if __name__ == "__main__":
         class Object(object):
             pass
         cmd_args = Object()
-        vars(cmd_args).update(input="logo_code.txt", output="stdout", locale="Russian", log="debug")
+        vars(cmd_args).update(input="utils/logo_code.txt", output="stdout", locale="Russian", log="debug")
 
     # устанавливаем уровень логгирования
     LOG_LEVEL = logging.getLevelName(cmd_args.log.upper())

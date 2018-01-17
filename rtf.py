@@ -137,11 +137,12 @@ def striprtf(text):
                     out.append(chr(c))
                 curskip = ucskip
         elif hex:  # \'xx
-            # print(hex)
+            # print(hex, curskip)
             if curskip > 0:
                 curskip -= 1
             elif not ignorable:
                 c = int(hex, 16)
+                # print(c)
                 if c > 127 and platform.system() == "Windows":
                     out.append(chr(c+848))  # NOQA
                 else:
@@ -151,6 +152,8 @@ def striprtf(text):
                 curskip -= 1
             elif not ignorable:
                 out.append(tchar)
+        # print(out[-1])
+    # print(''.join(out).replace('\u0000', ''))
     return ''.join(out).replace('\u0000', '')
 
 
@@ -175,6 +178,7 @@ def rtf2html(libreoffice_path, text):
     text = text.replace('\x00', '')
 
     fname = str(uuid.uuid4())
+    # TODO: delete temp files if could not finish
     with open('{}.rtf'.format(fname), 'w', encoding='utf-8') as f:
         f.write(text)
 
