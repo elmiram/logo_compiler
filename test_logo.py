@@ -95,6 +95,10 @@ class TestPrimitives(BaseUnitTest):
         self.check('ask "text2 [print "hello]',
                    'yield* prims.ask("text2", function*(){ yield* prims.print("hello"); });')
 
+    def test_unknown_type(self):
+        self.check('show ask "P1_Wario [1 + 1]',
+                   'yield* prims.show(yield* prims.ask("P1_Wario", function*(){ prims.sum(1, 1) }));')
+
     def test_empty(self):
         self.check('ask [] []', 'yield* prims.ask("", function*(){  });')
         self.check('print []', 'yield* prims.print("");')

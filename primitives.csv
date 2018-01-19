@@ -12,13 +12,14 @@ ANNOUNCEJR,1,1,yield* prims.announce({});
 ANSWER,0,0,prims.answer()
 ARCTAN,0,1,prims.arctan({})
 ASCII,0,1,prims.ascii({})
-ASK,2,2,yield* prims.ask({}, function*(){{ {} }})
+ASK,2,2,yield* prims.ask({}, function*(){{ let result = {}; return result; }});
 BACK,1,1,yield* prims.bk({});
 BG,0,0,prims.bg()
 BOTTOM,1,0,yield* prims.bottom();
 BROADCAST,1,1,yield* prims.broadcast({});
 BUTFIRST,0,1,prims.butfirst({})
 BUTLAST,0,1,prims.butlast({})
+CANCEL,1,1,prims.cancel({});
 CAREFULLY,1,2,try{{ {} }} catch (e) {{ prims.handleCarefully(e); {} }} finally {{ prims.finallyCarefully();}}
 CB,1,0,yield* prims.cb();
 CC,1,0,yield* prims.cc();
@@ -69,7 +70,7 @@ HOME,1,0,yield* prims.home();
 HT,1,0,yield* prims.ht();
 IDENTICAL?,0,2,prims.identical({}, {})
 IF,1,2,yield* prims.if({}, function*(){{ {} }});
-IFELSE,1,3,yield* prims.ifelse({}, function*(){{ {} }}, function*(){{ {} }});
+IFELSE,2,3,yield* prims.ifelse({}, function*(){{ let result = {}; return result }}, function*(){{ let result = {}; return result }});
 INBACK,1,0,yield* prims.inback();
 INFRONT,1,0,yield* prims.infront();
 INSERT,1,1,yield* prims.insert({});
@@ -129,6 +130,7 @@ SEARCH,1,1,yield* prims.search({});
 SELECT,1,0,prims.select();
 SELECTED,0,0,prims.selected()
 SENTENCE,0,2+,prims.sentence({})
+SET,1,3,prims.set({}, {}, {});
 SETBG,1,1,yield* prims.setbg({});
 SETC,1,1,yield* prims.setcolor({});
 SETFONTSIZE,1,1,yield* prims.setfontsize({});

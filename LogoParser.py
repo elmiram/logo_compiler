@@ -42,8 +42,7 @@ SPECIAL_USE_OF_LISTS = {"FOREVER": 0,
                         "DOLIST": 1,
                         "DOTIMES": 1,
                         "ASK": 1,
-                        "LAUNCH": 0,
-                        "CANCEL": 1
+                        "LAUNCH": 0
                         }
 
 PRIORITY = {'+': 1, '-': 1, '>': 0, '<': 0, '=': 0, '*': 2, '/': 2}
@@ -87,6 +86,7 @@ class Node(object):
     def __init__(self, value, parent=None):
         self.value = value
         self.children = []
+        self.child_trans = []
         self.parent = parent
         self.empty_list = False
         self.empty_word = False
@@ -131,7 +131,7 @@ class Primitive(object):
         if locale:
             self.locale = locale
         if trans == "USERPROC":
-            self.trans = 'yield* prims.userproc("{}", [{}])'.format(self.name, " ,".join(["{}"]*self.args))
+            self.trans = 'yield* prims.userproc("{}", [{}]);'.format(self.name, " ,".join(["{}"]*self.args))
             self.locale = [name.lower()]
         else:
             self.trans = trans
@@ -194,7 +194,7 @@ class Token(object):
                 return TokenType.PRIMITIVE_OR_WORD
 
     def __repr__(self):
-        return "{} <{}>".format(self.value, self.type)
+        return "{} <{}> <{}>".format(self.value, self.type, self.source)
 
 
 class Env(dict):
@@ -510,7 +510,7 @@ class Parser(object):
             elif el.type in {TokenType.PRIMITIVE_OR_WORD, TokenType.PRIMITIVE, TokenType.OPERATOR}:
                 el.type = TokenType.STRING
                 el.value = el.source
-                logger.warning("Reinterpreing <{}> as string.".format(el.value))
+                logger.debug("Reinterpreing <{}> as string.".format(el.value))
         return tree
 
     def process_list_of_instructions(self, instructions):
@@ -537,7 +537,19 @@ class Parser(object):
             if isinstance(root.value, Token) and root.value.value.name in SPECIAL_USE_OF_LISTS:
                 PREV_NUM_OF_NODES = SPECIAL_USE_OF_LISTS[root.value.value.name]
                 if len(root.children) >= PREV_NUM_OF_NODES:
+                    code2 = code
                     code = self.process_list_of_instructions(code)
+
+                    # this piece adds original logo-code (translated as logo constant) to js-code
+                    if root.value.value.name in {'FOREVER', 'LAUNCH'}:
+                        code2 = self.process_list_of_words(code2)
+                        root2, node2 = Node('ROOT'), Node("LIST")
+                        root2.add_child(node2)
+                        tree2 = self.create_tree(node2, code2, older_q=None, check=False)
+                        trans = self.post_order_translation(tree2)
+                        # logger.debug('translation ' + trans)
+                        root.value.value.trans = root.value.value.trans[:-2] + ', {});'.format(trans)
+
                     logger.debug("Updated tree: special use of lists. Root node: {}. Code: {}".format(root.value, code))
                     if not code:
                         node.empty_list = True
@@ -682,48 +694,59 @@ class Parser(object):
         child_translations = []
         for child in root.children:
             child_translations.append(self.post_order_translation(child))
-        root.children = child_translations
+        root.child_trans = child_translations
         return self.translate(root)
 
     def translate_list(self, list_node: Node) -> str:
         # logger.debug("LIST NODE CHILDREN: {}".format(list_node.children))
-        if len(list_node.children) == 0:
+        if len(list_node.child_trans) == 0:
             if list_node.empty_word:
                 return '""'
             if list_node.empty_list:
                 return ''
 
             return '""'
-        elif len(list_node.children) == 1:
-            el = list_node.children[0]
+        elif len(list_node.child_trans) == 1:
+            el = list_node.child_trans[0]
+            if isinstance(list_node.children[0].value, Token) and \
+                    list_node.children[0].value.type in {TokenType.STRING, TokenType.NUMBER, TokenType.VARIABLE} and \
+                    list_node.parent.value != "ROOT":
+                parent = list_node.parent.value
+                if isinstance(parent, Token) and isinstance(parent.value, Primitive) and \
+                        parent.value.name in {'ASK', 'IFELSE'}:
+                    return '{}'.format(el)
+                return '[{}]'.format(el)
             return el
         else:
             parent_node_token = list_node.parent.value
+            special_parent_case = False
             if isinstance(parent_node_token, Token):
                 if parent_node_token.type == TokenType.PRIMITIVE and parent_node_token.value.name == "LET":
                     result = []
-                    for ind, el in enumerate(list_node.children):
+                    for ind, el in enumerate(list_node.child_trans):
                         if ind % 2 == 0:
-                            name = re.search('".*?"', list_node.children[ind])
+                            name = re.search('".*?"', list_node.child_trans[ind])
                             if name is None:
-                                name = list_node.children[ind]
+                                name = list_node.child_trans[ind]
                             else:
                                 name = name.group(0)
                             result.append(parent_node_token.value.trans.format(name,
-                                                                               list_node.children[ind + 1]))
+                                                                               list_node.child_trans[ind + 1]))
                     return ' '.join(result)
                 if parent_node_token.type == TokenType.PRIMITIVE:
                     if parent_node_token.value.name not in SPECIAL_USE_OF_LISTS:
-                        return '[{}]'.format(', '.join(list_node.children))
+                        return '[{}]'.format(', '.join(list_node.child_trans))
                     else:
                         if list_node.parent.children.index(list_node) < SPECIAL_USE_OF_LISTS[parent_node_token.value.name]:
-                            return '[{}]'.format(', '.join(list_node.children))
+                            return '[{}]'.format(', '.join(list_node.child_trans))
+                        else:
+                            special_parent_case = True
 
-            if all(i.endswith('"') and i.startswith('"') for i in list_node.children):
-                return '[{}]'.format(', '.join(list_node.children))
+            if all(i.endswith('"') and i.startswith('"') for i in list_node.child_trans):
+                return '[{}]'.format(', '.join(list_node.child_trans))
 
             command_list = []
-            for el in list_node.children:
+            for el in list_node.child_trans:
                 # if not (el.strip().endswith("}") or el.strip().endswith(";")):
                 if el.endswith(')'):
                     el += ';'
@@ -734,50 +757,58 @@ class Parser(object):
 
             return '[{}]'.format(', '.join(command_list))
 
-    def get_primitive_type_of_child(self, parent_root):
-        if isinstance(parent_root.value, str) and parent_root.value == "TUPLE":
-            return ""
-        else:
-            return ';'
+    def update_child_translations(self, root):
+        for child_num, child in enumerate(root.children):
+            if isinstance(child.value, Token) and isinstance(child.value.value, Primitive):
+                primitive = child.value.value
+                if primitive.unknown_type:
+                    cur_trans = root.child_trans[child_num]
+                    if cur_trans.endswith(';'):
+                        root.child_trans[child_num] = cur_trans[:-1]
+                if primitive.is_command:
+                    logger.warning('Primitive {} is a command, but is used as an argument.'.format(primitive.name))
+        return root
 
     def translate(self, root: Node) -> str:
         """Translate a node to JS-code."""
         token = root.value
         if token == "ROOT":
-            return "\n".join(root.children)
+            return "\n".join(root.child_trans)
         if token == "LIST" or token == "TUPLE":
             result = self.translate_list(root)
             # logger.debug('LIST TRANSLATE RESULT: {}'.format(result))
             return result
         if token.type == TokenType.PRIMITIVE or token.type == TokenType.OPERATOR:
             if token.value.args == 0:
-                if len(root.children) == 0:
+                if len(root.child_trans) == 0:
                     return token.value.trans
                 else:
                     # TODO: fix these exceptions because we have translate from list
                     raise Exception('Primitive {} must has 0 arguments, {} given.'.format(token.value.name,
-                                                                                          len(root.children)))
+                                                                                          len(root.child_trans)))
             else:
                 if token.value.name == "LET":
-                    return root.children[0]
+                    return root.child_trans[0]
                 if token.value.name == "SAYAS":
-                    name = re.search('".*?"', root.children[1])
+                    name = re.search('".*?"', root.child_trans[1])
                     if name is None:
-                        name = root.children[1]
+                        name = root.child_trans[1]
                     else:
                         name = name.group(0)
-                    return token.value.trans.format(root.children[0], name)
+                    return token.value.trans.format(root.child_trans[0], name)
                 if token.value.name in self.ENV.with_many_args:
-                    return token.value.trans.format(', '.join(root.children))
-                if len(root.children) == token.value.args:
-                    # print(token.value.name, token.value.unknown_type, root.children, root.parent.value)
-                    trans_add = self.get_primitive_type_of_child(root.parent) if token.value.unknown_type else ''
-                    return token.value.trans.format(*root.children) + trans_add
+                    return token.value.trans.format(', '.join(root.child_trans))
+                if len(root.child_trans) == token.value.args:
+                    root = self.update_child_translations(root)
+                    return token.value.trans.format(*root.child_trans)
                 else:
                     raise Exception('Primitive {} must have {} arguments, {} given.'.format(token.value.name,
                                                                                             token.value.args,
-                                                                                            len(root.children)))
+                                                                                            len(root.child_trans)))
         elif token.type == TokenType.STRING:
+            if root.parent.value == 'LIST':
+                if '"' in token.source:
+                    return '"{}"'.format(token.source.replace('"', '\\"'))
             return '"{}"'.format(token.value.replace('"', '\\"'))
         elif token.type == TokenType.NUMBER:
             return str(token.value)
@@ -785,20 +816,61 @@ class Parser(object):
             return 'scope.thing("{}")'.format(token.value)
         raise Exception("Unknown token type: {}".format(token.type))
 
-    def translate_from_anywhere(self, proc_text, all_constants=False):
+    def check_tail_recursion(self, tree, name, args_str):
+        root = tree
+        tree = tree.children[0]
+        if tree.children:
+            last_call = tree.children[-1].value
+            if isinstance(last_call, Token) and isinstance(last_call.value, Primitive):
+                if last_call.value.name == name:
+                    args = [self.post_order_translation(node) for node in tree.children[-1].children]
+                    tail_recursion_code = """
+                            while (true) {{{{
+                                {{}}
+                                scope.reassign([{}], [{}]);
+                            }}}}
+                            """.format(args_str, ', '.join(args))
+                    tree.children.pop()
+                    return root, tail_recursion_code
+        return root, '{}'
+
+    def check_tree_correct(self, tree, **kwargs):
+        # logger.debug(kwargs)
+        all_constants = kwargs['all_constants'] if 'all_constants' in kwargs else False
+        if not all_constants:
+            token_types = {TokenType.PRIMITIVE, TokenType.OPERATOR}
+            for child in tree.children:
+                if not (isinstance(child.value, Token) and child.value.type in token_types):
+                    # logger.debug('{} {}'.format(child.value, child.value.type))
+                    return False
+        return True
+
+    def translate_from_anywhere(self, proc_text, **kwargs):
         proc_text = self.cut_comments(proc_text)
         new_code = self.cut_definition(proc_text)
         logger.debug("Start parsing Logo code...")
         if new_code:
-            tree = self.parse(new_code, all_constants=all_constants)
+            tree = self.parse(new_code, **kwargs)
+            if 'proc_name' in kwargs:
+                args_str = ', '.join(kwargs['args_list']) if 'args_list' in kwargs else ""
+                tree, template = self.check_tail_recursion(tree, kwargs['proc_name'], args_str)
+            else:
+                template = '{}'
+            correct_tree = self.check_tree_correct(tree.children[0], **kwargs)
             logger.debug("Start translating...")
             trans = self.post_order_translation(tree)
+            trans = template.format(trans)
+            if not correct_tree:
+                logger.critical('\n!!!\nCannot correctly translate logo code.\nLogo code: {}.\nFailed result: {}\n!!!'.format(new_code, trans))
+                raise Exception('Could not correctly translate logo code.')
         else:
             trans = ''
-        logger.info(trans)
         return trans
 
-    def translate_from_project(self, proc_text: str, wrapper="", args_list=None) -> str:
+    def translate_from_project(self, proc_text: str, **kwargs) -> str:
+        wrapper = kwargs['wrapper'] if 'wrapper' in kwargs else ''
+        args_list = kwargs['args_list'] if 'args_list' in kwargs else None
+        # wrapper="", args_list=None, all_constants=False
 
         # Интерфейс глобального логокода (событий):
         global_logo_code = """
@@ -818,7 +890,7 @@ class Parser(object):
                     {}
                     }}
                     """
-        trans = self.translate_from_anywhere(proc_text)
+        trans = self.translate_from_anywhere(proc_text, **kwargs)
         if wrapper == "GLOBAL":
             trans = global_logo_code.format(trans)
         if wrapper == "USERPROC":
@@ -882,7 +954,7 @@ if __name__ == "__main__":
 
     # для целей тестирования можно запускать этот код без командной строки,
     # тогда нужно установить test=True и нужные аргументы нужно прописать ниже:
-    test = True
+    test = False
     if test:
         class Object(object):
             pass

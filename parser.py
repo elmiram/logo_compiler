@@ -8,7 +8,7 @@ The contents of the project are transferred to data.js file.
 """
 
 __author__ = "Elmira Mustakimova <cclikespizza@gmail.com>"
-__version__ = "1.18.1"
+__version__ = "1.19.5"
 
 import argparse
 import base64
@@ -20,6 +20,7 @@ import re
 import string
 import struct
 import sys
+import uuid
 import zlib
 
 from rtf import striprtf, get_function_for_rtf_processing
@@ -146,7 +147,7 @@ def add_proc_to_dict(procs):
     for proc in procsarray:
         proc_name, arg_num, args_list = PARSER.primary_analysis(proc)
         if proc_name:
-            PARSER.ENV[proc_name] = Primitive(proc_name, 0, arg_num, "USERPROC", locale=[proc_name, proc_name.lower()])
+            PARSER.ENV[proc_name] = Primitive(proc_name, 2, arg_num, "USERPROC", locale=[proc_name, proc_name.lower()])
             PARSER.ENV.locale_reverse_index[proc_name.lower()] = PARSER.ENV[proc_name]
             logger.info("Rule for user procedure <{}>  is added to dictionary.".format(proc_name))
 
@@ -162,7 +163,7 @@ def get_numbers(content: str):
 def temporary_file_length(projname, tempname):
     """Читает файл проекта, записывает распакованное содержимое во временный файл и возвращает длину содержимого."""
     language, version, mwx_content = read_mwx_content(projname)
-    version = 'MJ3' if version else 'MWX'
+    version = 'PERVOLOGO' if version else 'MWX'
     with open(tempname, 'wb') as fname:
         fname.write(mwx_content)
     return language, version, len(mwx_content)
@@ -175,6 +176,14 @@ def get_key_values(f):
     content = f.read(off)
     content = struct.unpack("<{}s".format(off), content)[0]
     return content
+
+
+def create_files(path, mode, content):
+    fm = open(path, mode)
+    logger.info("Created multimedia file {}.".format(path))
+    fm.write(content)
+    fm.close()
+    return path
 
 
 def primary_process_object(object_content):
@@ -198,14 +207,11 @@ def primary_process_object(object_content):
         elif key == "type":
             object_type = c[-1]
         elif key == "data":
-            wav_filename = os.path.join(BASE_DIR, object_name + ".wav")
+            wav_filename = os.path.join(BASE_DIR, FILESDIR, object_name + ".wav")
             try:
-                fm = open(wav_filename, "xb")
+                create_files(wav_filename, "xb", content[10:])
             except:
-                fm = open(wav_filename, "wb")
-            logger.info("Created multimedia file {}.".format(wav_filename))
-            fm.write(content[10:])
-            fm.close()
+                create_files(wav_filename, "wb", content[10:])
     if object_type in TYPES:
         process_rules(object_type, object_name)
 
@@ -342,7 +348,7 @@ def process_procedures(obj_array, procsarray):
                     "List of arguments: {}".format(len(args_list),
                                                    ' '.join(args_list) if args_list else "empty"))
         logger.info('Translate code from procedures.')
-        code = PARSER.translate_from_project(proc, wrapper="USERPROC", args_list=args_list) \
+        code = PARSER.translate_from_project(proc, wrapper="USERPROC", args_list=args_list, proc_name=proc_name) \
             if proc not in ['', '||'] else ""
 
         proc_obj.code = code.strip()
@@ -395,7 +401,7 @@ def process_global_shapes(shapes, obj):
     for key in shapes_dict:
         loc_obj = Object()
         number = key
-        if VERSION == 'MJ3':
+        if VERSION == 'PERVOLOGO':
             number -= 1
         loc_obj.number, loc_obj.hash, loc_obj.name = number, shapes_dict[key]["hash"], shapes_dict[key]["name"]
         obj.GlobalShapes.append(loc_obj)
@@ -410,7 +416,13 @@ def process_global_shapes(shapes, obj):
                 # Что за первые два числа - непонятно, но третье число указывает длину битмэпа в байтах
                 data_off = struct.unpack("<3i", data_off)
                 content = FBASE.read(data_off[2])
-                bmp_obj.data = str(base64.b64encode(content))[2:-1]
+                if BUFFERFILES:
+                    bmp_obj.data = ''
+                    name = str(uuid.uuid4())
+                    bmp_obj.datafile = create_files(os.path.join(BASE_DIR, FILESDIR, name + '.bmp'), 'wb', content)
+                else:
+                    bmp_obj.data = str(base64.b64encode(content))[2:-1]
+                    bmp_obj.datafile = ''
                 obj.Bitmaps.append(bmp_obj)
 
 
@@ -429,12 +441,18 @@ def process_bitmaps(bitmaps, this_obj):
         loc_obj = Object()
         loc_obj.hash = c[0]  # hash
         # TODO: why 80?? not len(c[0])*2+2:
-        loc_obj.data = str(base64.b64encode(content[80:new_cur-old_cur]))[2:-1]  # data
+        if BUFFERFILES:
+            loc_obj.data = ''
+            name = str(uuid.uuid4())
+            loc_obj.datafile = create_files(os.path.join(BASE_DIR, FILESDIR, name + '.bmp'), 'wb', content[80:new_cur-old_cur])
+        else:
+            loc_obj.data = str(base64.b64encode(content[80:new_cur-old_cur]))[2:-1]  # data
+            loc_obj.datafile = ''
         this_obj.Bitmaps.append(loc_obj)
 
 
 def get_logo_constant(logo_code):
-    code = PARSER.translate_from_anywhere(logo_code, all_constants=True)
+    code = PARSER.translate_from_project(logo_code, all_constants=True)
     # TODO give warning if could not load json
     js_code = json.loads(code) if code else ""
     return js_code
@@ -452,17 +470,22 @@ def process_object(obj_content, this_obj):
         except:
             c = content[:30].decode('utf-16').split('\x00')
         key = c[0]
-        if key in {'locked?', 'visible?', 'snaped?', 'singleline?',
-                   'type', 'show-name?', 'vertical?', 'name',
-                   'min', 'max', 'current', 'value', 'defvalue', 'mode'}:
+        if key in {'locked?', 'visible?', 'snaped?', 'singleline?', 'inst', 'duration',
+                   'type', 'show-name?', 'vertical?', 'name', 'volume', 'tempo', 'unicode-notes',
+                   'min', 'max', 'current', 'value', 'defvalue', 'mode', 'position'}:
             attr_name = key.replace('?', '').replace('-', '_')
             vars(new_obj)[attr_name] = get_logo_constant(c[1])
-            if attr_name == 'name':
+            if attr_name == 'name' and new_obj.type in {'music', 'record', 'melody', 'video'}:
                 # TODO: if type record\audio
-                new_obj.filename = new_obj.name + ".wav"
+                if BUFFERFILES:
+                    new_obj.filename = os.path.join(BASE_DIR, FILESDIR, new_obj.name + ".wav")
+                else:
+                    new_obj.filename = new_obj.name + ".wav"
                 # TODO: check that mode is Embeded, if empty - WARNING: Object is not used because not embeded
         elif key == 'label':
             new_obj.label = c[1]
+        elif key == 'hash':
+            new_obj.hash = c[1]
         elif key == "rect":
             tmp = get_numbers(c[1])
             new_obj.rect = Object()
@@ -490,7 +513,13 @@ def process_object(obj_content, this_obj):
         elif key == "buffsize":
             new_obj.buffsize = get_numbers(c[-1])
         elif key == "buffer":
-            new_obj.buffer = str(base64.b64encode(content[14:]))[2:-1]
+            if BUFFERFILES:
+                new_obj.buffer = ''
+                name = str(uuid.uuid4())
+                new_obj.bufferfile = create_files(os.path.join(BASE_DIR, FILESDIR, name + '.bff'), 'wb', content[14:])
+            else:
+                new_obj.buffer = str(base64.b64encode(content[14:]))[2:-1]
+                new_obj.bufferfile = ''
     this_obj.Object.append(new_obj)
 
 
@@ -507,7 +536,8 @@ def process_object_pro(obj_content, this_obj):
             c = content[:30].decode('utf-16').split('\x00')
         key = c[0]
         if key in {'name', 'type', 'locked?', 'headsync?', 'shown?', 'size', 'pencolor', 'pensize', 'penstate',
-                   'heading', 'xpos', 'ypos', 'shapein', 'colorin', 'opacity', 'shape', 'turn-angle'}:
+                   'heading', 'xpos', 'ypos', 'shapein', 'colorin', 'opacity',
+                   'shape', 'turn-angle', 'shortname', 'pathname', 'visible?', 'show-name?'}:
             attr_name = key.replace('?', '').replace('-', '_')
             vars(new_obj)[attr_name] = get_logo_constant(c[1])
         elif key == "have-list":
@@ -526,6 +556,13 @@ def process_object_pro(obj_content, this_obj):
                     for tvarname in tvars:
                         vars(turtlevars)[tvarname] = tvars[tvarname]
                     new_obj.turtlevar = turtlevars
+        elif key == "rect":
+            tmp = get_numbers(c[1])
+            new_obj.rect = Object()
+            new_obj.rect.xpos = tmp[0]
+            new_obj.rect.ypos = tmp[1]
+            new_obj.rect.width = tmp[2]
+            new_obj.rect.height = tmp[3]
         elif key == "ShapesProcs":
             new_obj.shapesprocs = []
             logger.info('Translate code from ShapesProcs.')
@@ -615,16 +652,28 @@ def process_page(page, this_obj, offset=10):
         if key in {'name', 'curturtle', 'curtext', 'transition', 'bg', 'bg_alpha'}:
             vars(loc_obj)[key] = get_logo_constant(c[1])
         elif key == "buffer":
-            loc_obj.buffer = str(base64.b64encode(content[14:]))[2:-1]
+            if BUFFERFILES:
+                loc_obj.buffer = ''
+                name = str(uuid.uuid4())
+                loc_obj.bufferfile = create_files(os.path.join(BASE_DIR, FILESDIR, name + '.bff'), 'wb', content[14:])
+            else:
+                loc_obj.buffer = str(base64.b64encode(content[14:]))[2:-1]
+                loc_obj.bufferfile = ''
         elif key == 'freezebg':
-            loc_obj.freezebg = str(base64.b64encode(content[18:]))[2:-1]
+            if BUFFERFILES:
+                loc_obj.freezebg = ''
+                name = str(uuid.uuid4())
+                loc_obj.freezebgfile = create_files(os.path.join(BASE_DIR, FILESDIR, name + '.bff'), 'wb', content[18:])
+            else:
+                loc_obj.freezebg = str(base64.b64encode(content[18:]))[2:-1]
+                loc_obj.freezebgfile = ''
         elif key == "object":
             process_object(content, loc_obj)
         elif key == "ObjectPro":
             process_object_pro(content, loc_obj)
         elif key == "turtle-deamons":
             text = content.decode('utf-16')[16:-1]
-            # print(PARSER.translate_from_anywhere(text))
+            # print(PARSER.translate_from_project(text))
             # exit()
             lists = process_lists(text)
             for el in lists:
@@ -670,6 +719,9 @@ def second_run():
 
     final_object = Object()
     final_object.compiler_version = __version__
+    final_object.project_type = VERSION.lower()
+    final_object.compiler_lang = LANGUAGE
+    final_object.template_page = PARSER.ENV.STRINGS['template_page'][0]
     final_object.pages = []
 
     logger.info("Processing project...")
@@ -681,7 +733,7 @@ def second_run():
         key = c[0]
         if key == "projectsize":
             # content = [int(i) for i in get_numbers(c[-1])]
-            final_object.projectsize = json.loads(PARSER.translate_from_anywhere(c[-1]))
+            final_object.projectsize = get_logo_constant(c[-1])
         elif key == "procedures":
             logger.info('Translate code from procedures.')
             procs = striprtf(content[34:]).replace('\x00', '')
@@ -744,6 +796,11 @@ if __name__ == "__main__":
     # parse command line arguments
     p = argparse.ArgumentParser()
     p.add_argument('project_file', help="Path to mwx-project.")
+    p.add_argument('--bufferfiles', dest='bufferfiles', action='store_true',
+                   help="Whether write media to data.js of separate files.")
+    p.add_argument('--no-bufferfiles', dest='bufferfiles', action='store_false',
+                   help="Whether write media to data.js of separate files.")
+    p.set_defaults(bufferfiles=False)
     p.add_argument('--libreoffice', type=str, dest="libreoffice", default="/usr/lib/libreoffice/program/soffice",
                    help="Path to LibreOffice.")
     p.add_argument('--locale', type=str, dest="locale", default="none",
@@ -765,10 +822,10 @@ if __name__ == "__main__":
     except:
         # для целей тестирования можно запускать этот код без командной строки,
         # тогда нужные аргументы нужно прописать ниже:
-        cmd_args = Object()
-        vars(cmd_args).update(project_file="test_projects/Женя_Л.mj3",
-                              libreoffice="C:/Program Files (x86)/LibreOffice 5/program/soffice.exe",
-                              log="critical", locale='Russian')
+        cmd_line = ["test_projects/bug72-asktest.mwx", '--libreoffice',
+                    "C:/Program Files (x86)/LibreOffice 5/program/soffice.exe",
+                    "--log", "debug"]
+        cmd_args = p.parse_args(cmd_line)
 
     try:
         # устанавливаем уровень логгирования
@@ -780,7 +837,15 @@ if __name__ == "__main__":
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         TEMPORARY_FILE = os.path.join(BASE_DIR, "js-test.dat")
         PROJECT_FILE = cmd_args.project_file
+        project_basename = os.path.splitext(os.path.basename(PROJECT_FILE))[0]
+
         PROCESS_RTF, PLAINTEXT = get_function_for_rtf_processing(cmd_args.libreoffice)
+
+        BUFFERFILES = cmd_args.bufferfiles
+        FILESDIR = os.path.join(BASE_DIR, project_basename) if BUFFERFILES else ''
+        if FILESDIR:
+            if not os.path.exists(FILESDIR):
+                os.makedirs(FILESDIR)
 
         logger.info("Compiler version: {}".format(__version__))
         logger.info("Start reading project.")
